@@ -1,0 +1,520 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>مقارنة شاملة بين التقريرين</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+h2 {
+  text-align: center;
+}
+body {
+  margin: 0;
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  padding: 40px 20px;
+  color: #fff;
+  background:
+    linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+    url("https://raw.githubusercontent.com/xhhp1/mechanics/main/images/mechan.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.container {
+  display: flex;
+  gap: 40px;              /* مسافة أكبر بينهم */
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 1500px;      /* مساحة أكبر */
+  margin: auto;
+}
+
+.box {
+  flex: 0 1 600px;        /* عرض ثابت أكبر */
+  min-width: 550px;       /* يمنع الضغط */
+  padding: 30px;
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  transition: 0.3s ease;
+}
+
+.box:hover {
+  transform: translateY(-5px);
+}
+
+textarea {
+  width: 100%;
+  height: 550px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  resize: none;
+  font-family: 'Cairo', sans-serif;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  transition: 0.3s;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56,189,248,0.4);
+}
+
+button {
+  display: block;
+  margin: 40px auto;
+  padding: 15px 45px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  background: linear-gradient(90deg,#38bdf8,#6366f1);
+  color: white;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  transition: 0.3s ease;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+.box h3 {
+  text-align: center;
+}
+.result {
+  margin: 40px auto 0;
+  padding: 25px;
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(6px);
+  max-width: 1200px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.missing {
+  background: rgba(239,68,68,0.15);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 15px 0;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📊 متابعة السجلات (تقارير العمليات - تقارير الاشراف)</h2>
+
+<div class="container">
+  <div class="box">
+    <h3>تقرير الإشراف</h3>
+    <textarea id="supervision"></textarea>
+  </div>
+
+  <div class="box">
+    <h3>تقرير العمليات</h3>
+    <textarea id="operations"></textarea>
+  </div>
+</div>
+
+<button onclick="compare()">قارن الآن</button>
+
+<div class="result" id="result"></div>
+
+<script>
+
+/* ===== API USERS ===== */
+
+let usersMap = {};
+
+fetch("https://mechanic-backend.vercel.app/api/users")
+.then(res => res.json())
+.then(data => {
+
+  const users = Array.isArray(data) ? data : (data.users || data.data || []);
+
+  users.forEach(user => {
+    if(user.discord){
+      usersMap[String(user.discord)] = user.nickname || "";
+    }
+  });
+
+});
+
+/* ===== HELPER ===== */
+
+function getDiscordId(mention){
+  return mention.replace(/[<@!>]/g,"");
+}
+
+function formatUser(id){
+  const cleanId = getDiscordId(id);
+  const name = usersMap[cleanId];
+  return name ? `${name} (${id})` : id;
+}
+
+/* ===== ORIGINAL CODE ===== */
+
+function clean(text){
+  return text
+    .replace(/\*\*/g,"")
+    .replace(/ـ+/g,"")
+    .replace(/\[.*?\]\(.*?\)/g,"");
+}
+
+function normalizeLabel(label){
+  label = label
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[()]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const map = {
+    "قياده الكراج": "القياده",
+    "قيادة الكراج": "القياده",
+    "قياده": "القياده",
+    "قيادة": "القياده",
+
+    "المشرف العام": "اشراف عام",
+    "اشراف عام": "اشراف عام",
+
+    "المشرف الميداني": "اشراف ميداني",
+    "اشراف ميداني": "اشراف ميداني",
+
+    "مشرفين المناطق": "اشراف المناطق",
+    "مشرف المناطق": "اشراف المناطق",
+    "مشرف المنطقة": "اشراف المناطق",
+    "اشراف المناطق": "اشراف المناطق",
+
+    "مشرفين متدربين": "مشرفين متدربين",
+
+    "السيدات و المعتمدين": "المعتمدين",
+    "السيدات والمعتمدين": "المعتمدين",
+    "لاعب معتمد": "المعتمدين",
+
+    "العمليات": "العمليات",
+    "نائب العمليات": "نائب العمليات",
+
+    "مركز الاتصالات": "مركز الاتصالات",
+
+    "فني ميناء لوس": "ميناء لوس",
+    "ميناء لوس": "ميناء لوس",
+
+    "فني ميناء بوليتو": "ميناء بوليتو",
+    "ميناء بوليتو": "ميناء بوليتو",
+
+    "البحث والانقاذ": "البحث والانقاذ",
+    "البحث والإنقاذ": "البحث والانقاذ"
+  };
+
+  return map[label] || label;
+}
+
+function extractSections(text){
+
+  const excludedHeaders = new Set([
+    "مسؤول افتتاح المتجر",
+    "المشرف الميداني بروم الكراج",
+    "مشرف المنطقة بروم الكراج",
+    "مشرف المتدرب بروم الكراج"
+  ]);
+
+  const sections = {};
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  let currentOriginal = null;
+  let currentNormalized = null;
+
+  const header1 = /^(.+?)\s*:\s*(.*)$/;
+  const header2 = /^(.+?)\s*\(\s*(.*?)\s*\)\s*$/;
+  const header3 = /^(?!<@)(.+?)\s+(<@!?\d+>.*|لا ?يوجد.*)$/;
+
+  function add(id, normalized, original){
+    if (!sections[id]) sections[id] = new Map();
+    if (!sections[id].has(normalized)) sections[id].set(normalized, new Set());
+    sections[id].get(normalized).add(original);
+  }
+
+  for (let line of lines) {
+
+    let m = line.match(header1) || line.match(header2) || line.match(header3);
+
+    if (m && !line.startsWith("<@")) {
+
+      const rawOriginal = m[1].trim();
+
+      const normalizedHeader = normalizeLabel(rawOriginal);
+
+      if (
+        normalizedHeader.includes("بروم الكراج") ||
+        normalizedHeader === normalizeLabel("مسؤول افتتاح المتجر")
+      ) {
+        currentOriginal = null;
+        currentNormalized = null;
+        continue;
+      }
+
+      currentOriginal = rawOriginal;
+      currentNormalized = normalizeLabel(currentOriginal);
+
+      const rest = m[2] || "";
+      const idsInline = rest.match(/<@!?\d+>/g) || [];
+      for (const id of idsInline) add(id, currentNormalized, currentOriginal);
+
+      continue;
+    }
+
+    if (currentNormalized && currentOriginal) {
+      const ids = line.match(/<@!?\d+>/g) || [];
+      for (const id of ids) add(id, currentNormalized, currentOriginal);
+    }
+  }
+
+  const out = {};
+  for (const id in sections) {
+    out[id] = {};
+    for (const [norm, originalsSet] of sections[id].entries()) {
+      out[id][norm] = [...originalsSet];
+    }
+  }
+  return out;
+}
+/* ===== CHECK CODES (الجديد) ===== */
+
+function checkCodes(text) {
+  const lines = text.split("\n").map(l => l.trim());
+
+  let currentSection = "";
+  let issues = [];
+
+  lines.forEach(line => {
+
+    // تحديد القسم
+    if (line.includes(":")) {
+      currentSection = line.replace(":", "").trim();
+      return;
+    }
+
+    // لو كود
+    if (/^[A-Za-z]\s*-\s*\d+/.test(line)) {
+
+      const normalized = line.replace(/\s+/g, "");
+      const first = normalized[0].toLowerCase();
+
+      if (first !== "g") {
+        issues.push({
+          section: currentSection,
+          code: line
+        });
+      }
+    }
+
+  }); // ← مهم
+
+  return issues; // ← مهم
+}
+
+function findDuplicateCodesBySection(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  let currentSection = "";
+  const codeMap = {};
+  const duplicates = [];
+
+  lines.forEach(line => {
+
+    // تحديد القسم
+    if (line.includes(":")) {
+      currentSection = normalizeLabel(line.replace(":", "").trim());
+      return;
+    }
+
+    // استخراج الكود
+    const match = line.match(/^[A-Za-z]\s*-\s*\d+/);
+    if (match) {
+      const code = match[0].replace(/\s+/g, "").toLowerCase();
+
+      if (!codeMap[code]) {
+        codeMap[code] = {};
+      }
+
+      if (!codeMap[code][currentSection]) {
+        codeMap[code][currentSection] = 0;
+      }
+
+      codeMap[code][currentSection]++;
+    }
+
+  });
+
+  for (const code in codeMap) {
+    const sections = Object.keys(codeMap[code]);
+
+    sections.forEach(section => {
+      if (codeMap[code][section] > 1) {
+        duplicates.push({
+          code,
+          section,
+          count: codeMap[code][section],
+          type: "داخل نفس القسم"
+        });
+      }
+    });
+
+    if (sections.length > 1) {
+      duplicates.push({
+        code,
+        sections,
+        type: "بين الأقسام"
+      });
+    }
+  }
+
+  return duplicates;
+}
+  
+function compare(){
+  const sup = extractSections(clean(document.getElementById("supervision").value));
+  const ops = extractSections(clean(document.getElementById("operations").value));
+  const result = document.getElementById("result");
+
+  let output = "";
+  let hasDifference = false;
+ const issues = checkCodes(document.getElementById("operations").value);
+const duplicates = findDuplicateCodesBySection(document.getElementById("operations").value);
+
+if (duplicates.length) {
+  hasDifference = true;
+
+  output += "<div class='missing'>⚠ أكواد مكررة بين الأقسام:</div>";
+
+duplicates.forEach(item => {
+
+  if (item.type === "داخل نفس القسم") {
+    output += `الكود: ${item.code}<br>`;
+    output += `مكرر داخل قسم: ${item.section} (${item.count} مرات)<br><br>`;
+  }
+
+  if (item.type === "بين الأقسام") {
+    output += `الكود: ${item.code}<br>`;
+    output += "موجود في أكثر من قسم:<br>";
+    output += item.sections.join("<br>") + "<br><br>";
+  }
+
+});
+
+  output += "<hr>";
+}
+if (issues.length) {
+  hasDifference = true;
+
+  output += "<div class='missing'>⚠ أكواد غلط:</div>";
+
+  issues.forEach(item => {
+    output += `القسم: ${item.section} → الكود: ${item.code}<br>`;
+  });
+
+  output += "<hr>";
+}
+  const getNorms = obj => new Set(Object.keys(obj || {}));
+
+  const originalsForNorms = (obj, norms) => {
+    const out = [];
+    for (const n of norms) {
+      const arr = obj[n] || [];
+      for (const x of arr) out.push(x);
+    }
+    return [...new Set(out)];
+  };
+
+  Object.keys(sup).sort().forEach(id => {
+    if (!ops[id]) {
+      hasDifference = true;
+      output += `<div class='missing'>${formatUser(id)}</div>`;
+      output += "موجود في تقرير الإشراف داخل:<br>";
+      output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>");
+      output += "<hr>";
+    }
+  });
+
+  Object.keys(ops).sort().forEach(id => {
+    if (!sup[id]) {
+      hasDifference = true;
+      output += `<div class='missing'>${formatUser(id)}</div>`;
+      output += "موجود في تقرير نائب العمليات داخل:<br>";
+      output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>");
+      output += "<hr>";
+    }
+  });
+
+  Object.keys(sup).forEach(id => {
+    if (!ops[id]) return;
+
+    const supSet = getNorms(sup[id]);
+    const opsSet = getNorms(ops[id]);
+
+    const onlyInSup = [...supSet].filter(x => !opsSet.has(x));
+    const onlyInOps = [...opsSet].filter(x => !supSet.has(x));
+
+    if (onlyInSup.length || onlyInOps.length) {
+      hasDifference = true;
+      output += `<div class='missing'>${formatUser(id)}</div>`;
+      output += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
+
+      if (onlyInSup.length){
+        output += "<b>موجود في تقرير الإشراف فقط داخل:</b><br>";
+        output += originalsForNorms(sup[id], onlyInSup).join("<br>") + "<br><br>";
+      }
+
+      if (onlyInOps.length){
+        output += "<b>موجود في تقرير نائب العمليات فقط داخل:</b><br>";
+        output += originalsForNorms(ops[id], onlyInOps).join("<br>") + "<br><br>";
+      }
+
+      output += "<hr>";
+    }
+  });
+
+  if (!hasDifference) {
+    output = "<b>✔ لا يوجد أي اختلاف بين التقريرين</b>";
+  }
+
+  result.innerHTML = output;
+}
+document.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+});
+document.addEventListener('keydown', function(e) {
+  if (
+    (e.ctrlKey && e.key.toLowerCase() === 'u') ||
+    (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') ||
+    (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'j') ||
+    (e.ctrlKey && e.key.toLowerCase() === 's')
+  ) {
+    e.preventDefault();
+  }
+});
+</script>
+
+</body>
+</html>
