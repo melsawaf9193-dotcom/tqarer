@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -10,9 +9,7 @@
 
 <style>
 * { box-sizing: border-box; }
-h2 {
-  text-align: center;
-}
+h2 { text-align: center; }
 body {
   margin: 0;
   font-family: 'Cairo', sans-serif;
@@ -30,16 +27,16 @@ body {
 
 .container {
   display: flex;
-  gap: 40px;              /* مسافة أكبر بينهم */
+  gap: 40px;
   flex-wrap: wrap;
   justify-content: center;
-  max-width: 1500px;      /* مساحة أكبر */
+  max-width: 1500px;
   margin: auto;
 }
 
 .box {
-  flex: 0 1 600px;        /* عرض ثابت أكبر */
-  min-width: 550px;       /* يمنع الضغط */
+  flex: 0 1 600px;
+  min-width: 550px;
   padding: 30px;
   border-radius: 18px;
   background: rgba(30, 41, 59, 0.85);
@@ -48,9 +45,7 @@ body {
   transition: 0.3s ease;
 }
 
-.box:hover {
-  transform: translateY(-5px);
-}
+.box:hover { transform: translateY(-5px); }
 
 textarea {
   width: 100%;
@@ -86,12 +81,10 @@ button {
   transition: 0.3s ease;
 }
 
-button:hover {
-  transform: scale(1.05);
-}
-.box h3 {
-  text-align: center;
-}
+button:hover { transform: scale(1.05); }
+
+.box h3 { text-align: center; }
+
 .result {
   margin: 40px auto 0;
   padding: 25px;
@@ -142,36 +135,32 @@ hr {
 <script>
 
 /* ===== API USERS ===== */
-
 let usersMap = {};
 
 fetch("https://mechanic-backend.vercel.app/api/users")
 .then(res => res.json())
 .then(data => {
-
   const users = Array.isArray(data) ? data : (data.users || data.data || []);
-
   users.forEach(user => {
     if(user.discord){
-      usersMap[String(user.discord)] = user.nickname || "";
+      usersMap[String(user.discord)] = {
+          nickname: user.nickname || "",
+          code: user.code || ""
+      };
     }
   });
-
 });
 
-/* ===== HELPER ===== */
-
+/* ===== HELPERS ===== */
 function getDiscordId(mention){
   return mention.replace(/[<@!>]/g,"");
 }
 
 function formatUser(id){
   const cleanId = getDiscordId(id);
-  const name = usersMap[cleanId];
-  return name ? `${name} (${id})` : id;
+  const user = usersMap[cleanId];
+  return user ? `${user.nickname} (${id})` : id;
 }
-
-/* ===== ORIGINAL CODE ===== */
 
 function clean(text){
   return text
@@ -181,6 +170,7 @@ function clean(text){
 }
 
 function normalizeLabel(label){
+  if(!label) return "";
   label = label
     .replace(/[إأآا]/g, "ا")
     .replace(/ى/g, "ي")
@@ -190,104 +180,47 @@ function normalizeLabel(label){
     .trim();
 
   const map = {
-    "قياده الكراج": "القياده",
-    "قيادة الكراج": "القياده",
-    "قياده": "القياده",
-    "قيادة": "القياده",
-
-    "المشرف العام": "اشراف عام",
-    "اشراف عام": "اشراف عام",
-
-    "المشرف الميداني": "اشراف ميداني",
-    "اشراف ميداني": "اشراف ميداني",
-
-    "مشرفين المناطق": "اشراف المناطق",
-    "مشرف المناطق": "اشراف المناطق",
-    "مشرف المنطقة": "اشراف المناطق",
-    "اشراف المناطق": "اشراف المناطق",
-
-    "مشرفين متدربين": "مشرفين متدربين",
-
-    "السيدات و المعتمدين": "المعتمدين",
-    "السيدات والمعتمدين": "المعتمدين",
-    "لاعب معتمد": "المعتمدين",
-
-    "العمليات": "العمليات",
-    "نائب العمليات": "نائب العمليات",
-
+    "قياده الكراج": "القياده", "قيادة الكراج": "القياده", "قياده": "القياده", "قيادة": "القياده",
+    "المشرف العام": "اشراف عام", "اشراف عام": "اشراف عام",
+    "المشرف الميداني": "اشراف ميداني", "اشراف ميداني": "اشراف ميداني",
+    "مشرفين المناطق": "اشراف المناطق", "مشرف المناطق": "اشراف المناطق", "مشرف المنطقة": "اشراف المناطق", "اشراف المناطق": "اشراف المناطق",
+    "السيدات و المعتمدين": "المعتمدين", "السيدات والمعتمدين": "المعتمدين", "لاعب معتمد": "المعتمدين",
+    "العمليات": "العمليات", "نائب العمليات": "نائب العمليات",
     "مركز الاتصالات": "مركز الاتصالات",
-
-    "فني ميناء لوس": "ميناء لوس",
-    "ميناء لوس": "ميناء لوس",
-
-    "فني ميناء بوليتو": "ميناء بوليتو",
-    "ميناء بوليتو": "ميناء بوليتو",
-
-    "البحث والانقاذ": "البحث والانقاذ",
-    "البحث والإنقاذ": "البحث والانقاذ"
+    "فني ميناء لوس": "ميناء لوس", "ميناء لوس": "ميناء لوس",
+    "فني ميناء بوليتو": "ميناء بوليتو", "ميناء بوليتو": "ميناء بوليتو",
+    "البحث والانقاذ": "البحث والانقاذ", "البحث والإنقاذ": "البحث والانقاذ"
   };
-
   return map[label] || label;
 }
 
+/* ===== ANALYSIS FUNCTIONS ===== */
+
 function extractSections(text){
-
-  const excludedHeaders = new Set([
-    "مسؤول افتتاح المتجر",
-    "المشرف الميداني بروم الكراج",
-    "مشرف المنطقة بروم الكراج",
-    "مشرف المتدرب بروم الكراج"
-  ]);
-
   const sections = {};
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-
-  let currentOriginal = null;
   let currentNormalized = null;
+  let currentOriginal = null;
 
-  const header1 = /^(.+?)\s*:\s*(.*)$/;
-  const header2 = /^(.+?)\s*\(\s*(.*?)\s*\)\s*$/;
-  const header3 = /^(?!<@)(.+?)\s+(<@!?\d+>.*|لا ?يوجد.*)$/;
+  for (let line of lines) {
+    let m = line.match(/^(.+?)\s*:\s*(.*)$/) || line.match(/^(.+?)\s*\(\s*(.*?)\s*\)\s*$/);
+    if (m && !line.startsWith("<@")) {
+      currentOriginal = m[1].trim();
+      currentNormalized = normalizeLabel(currentOriginal);
+      const idsInline = (m[2] || "").match(/<@!?\d+>/g) || [];
+      for (const id of idsInline) add(id, currentNormalized, currentOriginal);
+      continue;
+    }
+    if (currentNormalized) {
+      const ids = line.match(/<@!?\d+>/g) || [];
+      for (const id of ids) add(id, currentNormalized, currentOriginal);
+    }
+  }
 
   function add(id, normalized, original){
     if (!sections[id]) sections[id] = new Map();
     if (!sections[id].has(normalized)) sections[id].set(normalized, new Set());
     sections[id].get(normalized).add(original);
-  }
-
-  for (let line of lines) {
-
-    let m = line.match(header1) || line.match(header2) || line.match(header3);
-
-    if (m && !line.startsWith("<@")) {
-
-      const rawOriginal = m[1].trim();
-
-      const normalizedHeader = normalizeLabel(rawOriginal);
-
-      if (
-        normalizedHeader.includes("بروم الكراج") ||
-        normalizedHeader === normalizeLabel("مسؤول افتتاح المتجر")
-      ) {
-        currentOriginal = null;
-        currentNormalized = null;
-        continue;
-      }
-
-      currentOriginal = rawOriginal;
-      currentNormalized = normalizeLabel(currentOriginal);
-
-      const rest = m[2] || "";
-      const idsInline = rest.match(/<@!?\d+>/g) || [];
-      for (const id of idsInline) add(id, currentNormalized, currentOriginal);
-
-      continue;
-    }
-
-    if (currentNormalized && currentOriginal) {
-      const ids = line.match(/<@!?\d+>/g) || [];
-      for (const id of ids) add(id, currentNormalized, currentOriginal);
-    }
   }
 
   const out = {};
@@ -299,220 +232,154 @@ function extractSections(text){
   }
   return out;
 }
-/* ===== CHECK CODES (الجديد) ===== */
 
 function checkCodes(text) {
   const lines = text.split("\n").map(l => l.trim());
-
   let currentSection = "";
   let issues = [];
-
   lines.forEach(line => {
-
-    // تحديد القسم
-    if (line.includes(":")) {
-      currentSection = line.replace(":", "").trim();
-      return;
-    }
-
-    // لو كود
+    if (line.includes(":")) { currentSection = line.replace(":", "").trim(); return; }
     if (/^[A-Za-z]\s*-\s*\d+/.test(line)) {
-
-      const normalized = line.replace(/\s+/g, "");
-      const first = normalized[0].toLowerCase();
-
-      if (first !== "g") {
-        issues.push({
-          section: currentSection,
-          code: line
-        });
-      }
+      const first = line.replace(/\s+/g, "")[0].toLowerCase();
+      if (first !== "g") issues.push({ section: currentSection, code: line });
     }
-
-  }); // ← مهم
-
-  return issues; // ← مهم
+  });
+  return issues;
 }
 
 function findDuplicateCodesBySection(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-
   let currentSection = "";
   const codeMap = {};
   const duplicates = [];
-
   lines.forEach(line => {
-
-    // تحديد القسم
-    if (line.includes(":")) {
-      currentSection = normalizeLabel(line.replace(":", "").trim());
-      return;
-    }
-
-    // استخراج الكود
+    if (line.includes(":")) { currentSection = normalizeLabel(line.replace(":", "").trim()); return; }
     const match = line.match(/^[A-Za-z]\s*-\s*\d+/);
     if (match) {
       const code = match[0].replace(/\s+/g, "").toLowerCase();
-
-      if (!codeMap[code]) {
-        codeMap[code] = {};
-      }
-
-      if (!codeMap[code][currentSection]) {
-        codeMap[code][currentSection] = 0;
-      }
-
+      if (!codeMap[code]) codeMap[code] = {};
+      if (!codeMap[code][currentSection]) codeMap[code][currentSection] = 0;
       codeMap[code][currentSection]++;
     }
-
   });
-
   for (const code in codeMap) {
     const sections = Object.keys(codeMap[code]);
-
-    sections.forEach(section => {
-      if (codeMap[code][section] > 1) {
-        duplicates.push({
-          code,
-          section,
-          count: codeMap[code][section],
-          type: "داخل نفس القسم"
-        });
-      }
+    sections.forEach(sec => {
+      if (codeMap[code][sec] > 1) duplicates.push({ code, section: sec, count: codeMap[code][sec], type: "داخل نفس القسم" });
     });
-
-    if (sections.length > 1) {
-      duplicates.push({
-        code,
-        sections,
-        type: "بين الأقسام"
-      });
-    }
+    if (sections.length > 1) duplicates.push({ code, sections, type: "بين الأقسام" });
   }
-
   return duplicates;
 }
-  
+
+function checkPortUserCodes(text) {
+    const lines = text.split("\n");
+    const reportCodes = (text.match(/G-\d+/gi) || []).map(c => c.toUpperCase().replace(/\s/g, ''));
+    let portIssues = [];
+
+    lines.forEach(line => {
+        if(line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
+            const mentions = line.match(/<@!?\d+>/g);
+            if(mentions) {
+                mentions.forEach(m => {
+                    const id = getDiscordId(m);
+                    const user = usersMap[id];
+                    if(user && user.code) {
+                        const cleanUserCode = user.code.toUpperCase().replace(/\s/g, '');
+                        if(!reportCodes.includes(cleanUserCode)) {
+                            portIssues.push(`فني الميناء **${user.nickname}** الذي كوده **${user.code}** مكتوب في الميناء لكن كوده مش مكتوب تحت.`);
+                        }
+                    }
+                });
+            }
+        }
+    });
+    return portIssues;
+}
+
+/* ===== MAIN COMPARE FUNCTION ===== */
+
 function compare(){
-  const sup = extractSections(clean(document.getElementById("supervision").value));
-  const ops = extractSections(clean(document.getElementById("operations").value));
+  const opsRaw = document.getElementById("operations").value;
+  const supRaw = document.getElementById("supervision").value;
   const result = document.getElementById("result");
 
   let output = "";
   let hasDifference = false;
- const issues = checkCodes(document.getElementById("operations").value);
-const duplicates = findDuplicateCodesBySection(document.getElementById("operations").value);
 
-if (duplicates.length) {
-  hasDifference = true;
-
-  output += "<div class='missing'>⚠ أكواد مكررة بين الأقسام:</div>";
-
-duplicates.forEach(item => {
-
-  if (item.type === "داخل نفس القسم") {
-    output += `الكود: ${item.code}<br>`;
-    output += `مكرر داخل قسم: ${item.section} (${item.count} مرات)<br><br>`;
-  }
-
-  if (item.type === "بين الأقسام") {
-    output += `الكود: ${item.code}<br>`;
-    output += "موجود في أكثر من قسم:<br>";
-    output += item.sections.join("<br>") + "<br><br>";
-  }
-
-});
-
-  output += "<hr>";
-}
-if (issues.length) {
-  hasDifference = true;
-
-  output += "<div class='missing'>⚠ أكواد غلط:</div>";
-
-  issues.forEach(item => {
-    output += `القسم: ${item.section} → الكود: ${item.code}<br>`;
+  // 1. فحص الموانئ والأكواد المطلوبة
+  let portIssues = checkPortUserCodes(opsRaw);
+  const mandatoryCodes = ["G-774", "G-769", "G-801"];
+  mandatoryCodes.forEach(c => {
+      if(!opsRaw.toUpperCase().includes(c)) portIssues.push(`الكود الإجباري **${c}** مش مكتوب في التقرير!`);
   });
 
-  output += "<hr>";
-}
-  const getNorms = obj => new Set(Object.keys(obj || {}));
+  if(portIssues.length > 0) {
+      hasDifference = true;
+      output += "<div class='missing'>⚠️ تنبيهات الموانئ والأكواد:</div>";
+      portIssues.forEach(msg => output += `• ${msg}<br>`);
+      output += "<hr>";
+  }
 
+  // 2. فحص الأكواد المكررة والغلط
+  const codeIssues = checkCodes(opsRaw);
+  const duplicates = findDuplicateCodesBySection(opsRaw);
+
+  if (duplicates.length) {
+    hasDifference = true;
+    output += "<div class='missing'>⚠ أكواد مكررة بين الأقسام:</div>";
+    duplicates.forEach(item => {
+      if (item.type === "داخل نفس القسم") output += `الكود: ${item.code} مكرر في ${item.section}<br>`;
+      else output += `الكود: ${item.code} موجود في: ${item.sections.join(" و ")}<br>`;
+    });
+    output += "<hr>";
+  }
+
+  if (codeIssues.length) {
+    hasDifference = true;
+    output += "<div class='missing'>⚠ أكواد غلط (لا تبدأ بـ G):</div>";
+    codeIssues.forEach(item => output += `القسم: ${item.section} → الكود: ${item.code}<br>`);
+    output += "<hr>";
+  }
+
+  // 3. مقارنة الأقسام والأسماء
+  const sup = extractSections(clean(supRaw));
+  const ops = extractSections(clean(opsRaw));
+
+  const getNorms = obj => new Set(Object.keys(obj || {}));
   const originalsForNorms = (obj, norms) => {
-    const out = [];
+    const outArr = [];
     for (const n of norms) {
       const arr = obj[n] || [];
-      for (const x of arr) out.push(x);
+      for (const x of arr) outArr.push(x);
     }
-    return [...new Set(out)];
+    return [...new Set(outArr)];
   };
 
   Object.keys(sup).sort().forEach(id => {
     if (!ops[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>`;
-      output += "موجود في تقرير الإشراف داخل:<br>";
-      output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>");
-      output += "<hr>";
+      output += `<div class='missing'>${formatUser(id)}</div>موجود في الإشراف وغير موجود في العمليات.<br>`;
+      output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>") + "<hr>";
     }
   });
 
   Object.keys(ops).sort().forEach(id => {
     if (!sup[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>`;
-      output += "موجود في تقرير نائب العمليات داخل:<br>";
-      output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>");
-      output += "<hr>";
+      output += `<div class='missing'>${formatUser(id)}</div>موجود في العمليات وغير موجود في الإشراف.<br>`;
+      output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>") + "<hr>";
     }
   });
 
-  Object.keys(sup).forEach(id => {
-    if (!ops[id]) return;
-
-    const supSet = getNorms(sup[id]);
-    const opsSet = getNorms(ops[id]);
-
-    const onlyInSup = [...supSet].filter(x => !opsSet.has(x));
-    const onlyInOps = [...opsSet].filter(x => !supSet.has(x));
-
-    if (onlyInSup.length || onlyInOps.length) {
-      hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>`;
-      output += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
-
-      if (onlyInSup.length){
-        output += "<b>موجود في تقرير الإشراف فقط داخل:</b><br>";
-        output += originalsForNorms(sup[id], onlyInSup).join("<br>") + "<br><br>";
-      }
-
-      if (onlyInOps.length){
-        output += "<b>موجود في تقرير نائب العمليات فقط داخل:</b><br>";
-        output += originalsForNorms(ops[id], onlyInOps).join("<br>") + "<br><br>";
-      }
-
-      output += "<hr>";
-    }
-  });
-
-  if (!hasDifference) {
-    output = "<b>✔ لا يوجد أي اختلاف بين التقريرين</b>";
-  }
-
+  if (!hasDifference) output = "<b>✔ لا يوجد أي اختلاف والتقرير سليم تماماً</b>";
   result.innerHTML = output;
 }
-document.addEventListener('contextmenu', function(e) {
-  e.preventDefault();
-});
-document.addEventListener('keydown', function(e) {
-  if (
-    (e.ctrlKey && e.key.toLowerCase() === 'u') ||
-    (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') ||
-    (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'j') ||
-    (e.ctrlKey && e.key.toLowerCase() === 's')
-  ) {
-    e.preventDefault();
-  }
+
+/* ===== PROTECT PAGE ===== */
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && ['u','s','i','j'].includes(e.key.toLowerCase())) e.preventDefault();
 });
 </script>
 
