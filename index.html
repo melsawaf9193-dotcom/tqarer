@@ -300,51 +300,26 @@ function checkPortUserCodes(text) {
     const lines = text.split("\n");
     let portIssues = [];
 
-    function getCodesFromRegion(regionName) {
-        let regionFound = false;
-        let codes = [];
-        for (let line of lines) {
-            const cleanLine = line.trim();
-            if (cleanLine.includes(regionName) && cleanLine.includes(":") && !cleanLine.includes("ميناء")) {
-                regionFound = true;
-                continue;
-            }
-            if (regionFound && cleanLine.includes(":") && !cleanLine.includes(regionName)) {
-                regionFound = false;
-            }
-            if (regionFound) {
-                const match = cleanLine.match(/G-\d+/gi);
-                if (match) codes.push(...match.map(c => c.toUpperCase().replace(/\s/g, '')));
-            }
-        }
-        return codes;
-    }
-
-    const losCodes = getCodesFromRegion("لوس");
-    const paletoCodes = getCodesFromRegion("بوليتو");
+    // جمع كل الأكواد الموجودة في التقرير بالكامل في قائمة واحدة
+    const allCodesInReport = text.match(/G-\d+/gi) || [];
+    const normalizedCodes = allCodesInReport.map(c => c.toUpperCase().replace(/\s/g, ''));
 
     lines.forEach(line => {
         const mentions = line.match(/<@!?\d+>/g);
         if (!mentions) return;
 
-        if (line.includes("ميناء لوس")) {
+        // إذا كانت السطر يخص فني ميناء (لوس أو بوليتو)
+        if (line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
+            const portName = line.includes("لوس") ? "ميناء لوس" : "ميناء بوليتو";
+            
             mentions.forEach(m => {
                 const user = usersMap[getDiscordId(m)];
                 if (user && user.code) {
                     const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
-                    if (!losCodes.includes(cleanCode)) {
-                        portIssues.push(`فني ميناء لوس **${user.nickname}** كوده **(${user.code})** مش مكتوب في قسم **"لوس"** بالأسفل.`);
-                    }
-                }
-            });
-        } 
-        else if (line.includes("ميناء بوليتو")) {
-            mentions.forEach(m => {
-                const user = usersMap[getDiscordId(m)];
-                if (user && user.code) {
-                    const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
-                    if (!paletoCodes.includes(cleanCode)) {
-                        portIssues.push(`فني ميناء بوليتو **${user.nickname}** كوده **(${user.code})** مش مكتوب في قسم **"بوليتو"** بالأسفل.`);
+                    
+                    // التحقق إذا كان كود الشخص موجود في أي مكان في التقرير
+                    if (!normalizedCodes.includes(cleanCode)) {
+                        portIssues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في أي قسم بالعمليات.`);
                     }
                 }
             });
