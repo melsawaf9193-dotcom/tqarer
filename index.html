@@ -119,12 +119,12 @@ hr {
 <div class="container">
   <div class="box">
     <h3>تقرير الإشراف</h3>
-    <textarea id="supervision"></textarea>
+    <textarea id="supervision" placeholder="ألصق تقرير الإشراف هنا..."></textarea>
   </div>
 
-  <div class="box">
+  <div class="box :">
     <h3>تقرير العمليات</h3>
-    <textarea id="operations"></textarea>
+    <textarea id="operations" placeholder="ألصق تقرير العمليات هنا..."></textarea>
   </div>
 </div>
 
@@ -144,8 +144,9 @@ fetch("https://mechanic-backend.vercel.app/api/users")
   users.forEach(user => {
     if(user.discord){
       usersMap[String(user.discord)] = {
-          nickname: user.nickname || "",
-          code: user.code || ""
+          nickname: user.nickname || "غير معروف",
+          code: user.code || "",
+          isWomen: !!user.isWomen // تخزين حالة isWomen
       };
     }
   });
@@ -179,6 +180,15 @@ function normalizeLabel(label){
     .replace(/\s+/g, " ")
     .trim();
 
+  const ignoreList = [
+    "مسؤول افتتاح المتجر", "مسؤل افتتاح المتجر",
+    "المشرف الميداني بروم الكراج",
+    "مشرف المنطقة بروم الكراج",
+    "مشرف المتدرب بروم الكراج"
+  ];
+
+  if (ignoreList.some(item => label.includes(item))) return null;
+
   const map = {
     "قياده الكراج": "القياده", "قيادة الكراج": "القياده", "قياده": "القياده", "قيادة": "القياده",
     "المشرف العام": "اشراف عام", "اشراف عام": "اشراف عام",
@@ -207,17 +217,29 @@ function extractSections(text){
     if (m && !line.startsWith("<@")) {
       currentOriginal = m[1].trim();
       currentNormalized = normalizeLabel(currentOriginal);
+      
+      if (currentNormalized === null) continue;
+
       const idsInline = (m[2] || "").match(/<@!?\d+>/g) || [];
       for (const id of idsInline) add(id, currentNormalized, currentOriginal);
       continue;
     }
-    if (currentNormalized) {
+    
+    if (currentNormalized !== null) {
       const ids = line.match(/<@!?\d+>/g) || [];
       for (const id of ids) add(id, currentNormalized, currentOriginal);
     }
   }
 
   function add(id, normalized, original){
+    const cleanId = getDiscordId(id);
+    const user = usersMap[cleanId];
+
+    // المنطق الجديد: إذا كان القسم هو "المعتمدين" وكان المستخدم "isWomen: true" يتم تجاهله
+    if (normalized === "المعتمدين" && user && user.isWomen) {
+        return; 
+    }
+
     if (!sections[id]) sections[id] = new Map();
     if (!sections[id].has(normalized)) sections[id].set(normalized, new Set());
     sections[id].get(normalized).add(original);
@@ -254,6 +276,8 @@ function findDuplicateCodesBySection(text) {
   const duplicates = [];
   lines.forEach(line => {
     if (line.includes(":")) { currentSection = normalizeLabel(line.replace(":", "").trim()); return; }
+    if (currentSection === null) return;
+
     const match = line.match(/^[A-Za-z]\s*-\s*\d+/);
     if (match) {
       const code = match[0].replace(/\s+/g, "").toLowerCase();
@@ -274,24 +298,56 @@ function findDuplicateCodesBySection(text) {
 
 function checkPortUserCodes(text) {
     const lines = text.split("\n");
-    const reportCodes = (text.match(/G-\d+/gi) || []).map(c => c.toUpperCase().replace(/\s/g, ''));
     let portIssues = [];
 
-    lines.forEach(line => {
-        if(line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
-            const mentions = line.match(/<@!?\d+>/g);
-            if(mentions) {
-                mentions.forEach(m => {
-                    const id = getDiscordId(m);
-                    const user = usersMap[id];
-                    if(user && user.code) {
-                        const cleanUserCode = user.code.toUpperCase().replace(/\s/g, '');
-                        if(!reportCodes.includes(cleanUserCode)) {
-                            portIssues.push(`فني الميناء **${user.nickname}** الذي كوده **${user.code}** مكتوب في الميناء لكن كوده مش مكتوب تحت.`);
-                        }
-                    }
-                });
+    function getCodesFromRegion(regionName) {
+        let regionFound = false;
+        let codes = [];
+        for (let line of lines) {
+            const cleanLine = line.trim();
+            if (cleanLine.includes(regionName) && cleanLine.includes(":") && !cleanLine.includes("ميناء")) {
+                regionFound = true;
+                continue;
             }
+            if (regionFound && cleanLine.includes(":") && !cleanLine.includes(regionName)) {
+                regionFound = false;
+            }
+            if (regionFound) {
+                const match = cleanLine.match(/G-\d+/gi);
+                if (match) codes.push(...match.map(c => c.toUpperCase().replace(/\s/g, '')));
+            }
+        }
+        return codes;
+    }
+
+    const losCodes = getCodesFromRegion("لوس");
+    const paletoCodes = getCodesFromRegion("بوليتو");
+
+    lines.forEach(line => {
+        const mentions = line.match(/<@!?\d+>/g);
+        if (!mentions) return;
+
+        if (line.includes("ميناء لوس")) {
+            mentions.forEach(m => {
+                const user = usersMap[getDiscordId(m)];
+                if (user && user.code) {
+                    const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
+                    if (!losCodes.includes(cleanCode)) {
+                        portIssues.push(`فني ميناء لوس **${user.nickname}** كوده **(${user.code})** مش مكتوب في قسم **"لوس"** بالأسفل.`);
+                    }
+                }
+            });
+        } 
+        else if (line.includes("ميناء بوليتو")) {
+            mentions.forEach(m => {
+                const user = usersMap[getDiscordId(m)];
+                if (user && user.code) {
+                    const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
+                    if (!paletoCodes.includes(cleanCode)) {
+                        portIssues.push(`فني ميناء بوليتو **${user.nickname}** كوده **(${user.code})** مش مكتوب في قسم **"بوليتو"** بالأسفل.`);
+                    }
+                }
+            });
         }
     });
     return portIssues;
@@ -304,26 +360,28 @@ function compare(){
   const supRaw = document.getElementById("supervision").value;
   const result = document.getElementById("result");
 
+  if(!opsRaw || !supRaw) {
+      result.innerHTML = "<div class='missing'>يرجى ملء كلا التقريرين للمقارنة.</div>";
+      return;
+  }
+
   let output = "";
   let hasDifference = false;
 
-  // 1. فحص الموانئ والأكواد المطلوبة
   let portIssues = checkPortUserCodes(opsRaw);
-
   if(portIssues.length > 0) {
       hasDifference = true;
-      output += "<div class='missing'>⚠️ تنبيهات الموانئ والأكواد:</div>";
+      output += "<div class='missing'>⚠️ تنبيهات الموانئ والمناطق:</div>";
       portIssues.forEach(msg => output += `• ${msg}<br>`);
       output += "<hr>";
   }
 
-  // 2. فحص الأكواد المكررة والغلط
   const codeIssues = checkCodes(opsRaw);
   const duplicates = findDuplicateCodesBySection(opsRaw);
 
   if (duplicates.length) {
     hasDifference = true;
-    output += "<div class='missing'>⚠ أكواد مكررة بين الأقسام:</div>";
+    output += "<div class='missing'>⚠ أكواد مكررة:</div>";
     duplicates.forEach(item => {
       if (item.type === "داخل نفس القسم") output += `الكود: ${item.code} مكرر في ${item.section}<br>`;
       else output += `الكود: ${item.code} موجود في: ${item.sections.join(" و ")}<br>`;
@@ -338,11 +396,9 @@ function compare(){
     output += "<hr>";
   }
 
-  // 3. مقارنة الأقسام والأسماء
   const sup = extractSections(clean(supRaw));
   const ops = extractSections(clean(opsRaw));
 
-  const getNorms = obj => new Set(Object.keys(obj || {}));
   const originalsForNorms = (obj, norms) => {
     const outArr = [];
     for (const n of norms) {
