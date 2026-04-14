@@ -122,7 +122,7 @@ hr {
     <textarea id="supervision" placeholder="ألصق تقرير الإشراف هنا..."></textarea>
   </div>
 
-  <div class="box :">
+  <div class="box">
     <h3>تقرير العمليات</h3>
     <textarea id="operations" placeholder="ألصق تقرير العمليات هنا..."></textarea>
   </div>
@@ -146,7 +146,7 @@ fetch("https://mechanic-backend.vercel.app/api/users")
       usersMap[String(user.discord)] = {
           nickname: user.nickname || "غير معروف",
           code: user.code || "",
-          isWomen: !!user.isWomen // تخزين حالة isWomen
+          isWomen: !!user.isWomen 
       };
     }
   });
@@ -235,7 +235,6 @@ function extractSections(text){
     const cleanId = getDiscordId(id);
     const user = usersMap[cleanId];
 
-    // المنطق الجديد: إذا كان القسم هو "المعتمدين" وكان المستخدم "isWomen: true" يتم تجاهله
     if (normalized === "المعتمدين" && user && user.isWomen) {
         return; 
     }
@@ -296,36 +295,52 @@ function findDuplicateCodesBySection(text) {
   return duplicates;
 }
 
-function checkPortUserCodes(text) {
+// دالة الفحص المدمجة للموانئ ومخالفات البنات
+function checkSpecialViolations(text) {
     const lines = text.split("\n");
-    let portIssues = [];
+    let issues = [];
 
-    // جمع كل الأكواد الموجودة في التقرير بالكامل في قائمة واحدة
-    const allCodesInReport = text.match(/G-\d+/gi) || [];
-    const normalizedCodes = allCodesInReport.map(c => c.toUpperCase().replace(/\s/g, ''));
+    // 1. جمع كل الأكواد الموجودة في التقرير كاملاً
+    const allCodesInReport = text.match(/[A-Z]-\d+/gi) || [];
+    const normalizedAllCodes = allCodesInReport.map(c => c.toUpperCase().replace(/\s/g, ''));
+
+    // 2. تحديد الأكواد التي تخص البنات فقط (isWomen) من قاعدة البيانات
+    const womenCodes = Object.values(usersMap)
+        .filter(u => u.isWomen && u.code)
+        .map(u => u.code.toUpperCase().replace(/\s/g, ''));
 
     lines.forEach(line => {
         const mentions = line.match(/<@!?\d+>/g);
         if (!mentions) return;
 
-        // إذا كانت السطر يخص فني ميناء (لوس أو بوليتو)
-        if (line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
-            const portName = line.includes("لوس") ? "ميناء لوس" : "ميناء بوليتو";
-            
-            mentions.forEach(m => {
-                const user = usersMap[getDiscordId(m)];
-                if (user && user.code) {
+        mentions.forEach(m => {
+            const user = usersMap[getDiscordId(m)];
+            if (!user) return;
+
+            // فحص الموانئ (من كودك الأصلي)
+            if (line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
+                const portName = line.includes("لوس") ? "ميناء لوس" : "ميناء بوليتو";
+                if (user.code) {
                     const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
-                    
-                    // التحقق إذا كان كود الشخص موجود في أي مكان في التقرير
-                    if (!normalizedCodes.includes(cleanCode)) {
-                        portIssues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في أي قسم بالعمليات.`);
+                    if (!normalizedAllCodes.includes(cleanCode)) {
+                        issues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في أي قسم بالعمليات.`);
                     }
                 }
-            });
-        }
+            }
+
+            // فحص البنات (المنطق المطلوب): يمنع وجود كودها في أي قسم سفلية
+            if ((line.includes("السيدات") || line.includes("المعتمدين")) && user.isWomen) {
+                if (user.code) {
+                    const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
+                    // إذا وجدنا الكود مكرراً في التقرير، وبما أن الأكواد لا تكتب إلا في الأقسام، فهذا يعني أنها كتبت تحت
+                    if (normalizedAllCodes.includes(cleanCode)) {
+                         issues.push(`الفنيه **${user.nickname}** كودها **(${user.code})** مكتوب بالخطأ تحت في الأقسام.`);
+                    }
+                }
+            }
+        });
     });
-    return portIssues;
+    return [...new Set(issues)];
 }
 
 /* ===== MAIN COMPARE FUNCTION ===== */
@@ -343,11 +358,12 @@ function compare(){
   let output = "";
   let hasDifference = false;
 
-  let portIssues = checkPortUserCodes(opsRaw);
-  if(portIssues.length > 0) {
+  // تشغيل فحص الموانئ والبنات
+  let specialIssues = checkSpecialViolations(opsRaw);
+  if(specialIssues.length > 0) {
       hasDifference = true;
-      output += "<div class='missing'>⚠️ تنبيهات الموانئ والمناطق:</div>";
-      portIssues.forEach(msg => output += `• ${msg}<br>`);
+      output += "<div class='missing'>⚠️ تنبيهات الموظفات والموانئ:</div>";
+      specialIssues.forEach(msg => output += `• ${msg}<br>`);
       output += "<hr>";
   }
 
