@@ -309,10 +309,6 @@ function compare(){
 
   // 1. فحص الموانئ والأكواد المطلوبة
   let portIssues = checkPortUserCodes(opsRaw);
-  const mandatoryCodes = [""];
-  mandatoryCodes.forEach(c => {
-      if(!opsRaw.toUpperCase().includes(c)) portIssues.push(`الكود الإجباري **${c}** مش مكتوب في التقرير!`);
-  });
 
   if(portIssues.length > 0) {
       hasDifference = true;
