@@ -309,7 +309,7 @@ function compare(){
 
   // 1. فحص الموانئ والأكواد المطلوبة
   let portIssues = checkPortUserCodes(opsRaw);
-  const mandatoryCodes = ["G-774", "G-769", "G-801"];
+  const mandatoryCodes = [""];
   mandatoryCodes.forEach(c => {
       if(!opsRaw.toUpperCase().includes(c)) portIssues.push(`الكود الإجباري **${c}** مش مكتوب في التقرير!`);
   });
