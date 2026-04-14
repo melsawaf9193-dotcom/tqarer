@@ -362,7 +362,7 @@ function compare(){
   let specialIssues = checkSpecialViolations(opsRaw);
   if(specialIssues.length > 0) {
       hasDifference = true;
-      output += "<div class='missing'>⚠️ تنبيهات الموظفات والموانئ:</div>";
+      output += "<div class='missing'>⚠️ تنبيهات الفنيات والموانئ:</div>";
       specialIssues.forEach(msg => output += `• ${msg}<br>`);
       output += "<hr>";
   }
