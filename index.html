@@ -123,8 +123,8 @@ hr {
   </div>
 
   <div class="box">
-    <h3>تقرير العمليات</h3>
-    <textarea id="operations" placeholder="ألصق تقرير العمليات هنا..."></textarea>
+    <h3>تقرير نائب العمليات</h3>
+    <textarea id="operations" placeholder="ألصق تقرير نائب العمليات هنا..."></textarea>
   </div>
 </div>
 
@@ -426,7 +426,7 @@ function compare(){
   Object.keys(sup).sort().forEach(id => {
     if (!ops[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>موجود في الإشراف وغير موجود في العمليات.<br>`;
+      output += `<div class='missing'>${formatUser(id)}</div>موجود في تقرير الاشراف وغير موجود في تقرير النائب.<br>`;
       output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>") + "<hr>";
     }
   });
@@ -434,7 +434,7 @@ function compare(){
   Object.keys(ops).sort().forEach(id => {
     if (!sup[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>موجود في العمليات وغير موجود في الإشراف.<br>`;
+      output += `<div class='missing'>${formatUser(id)}</div>موجود في تقرير النائب وغير موجود في تقرير الإشراف.<br>`;
       output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>") + "<hr>";
     }
   });
