@@ -327,7 +327,7 @@ function checkSpecialViolations(text) {
                 if (user.code) {
                     const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
                     if (!normalizedAllCodes.includes(cleanCode)) {
-                        issues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في أي قسم بالعمليات.`);
+                        issues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في تقرير نائب العمليات.`);
                     }
                 }
             }
@@ -338,7 +338,7 @@ function checkSpecialViolations(text) {
                     const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
                     // إذا وجدنا الكود مكرراً في التقرير، وبما أن الأكواد لا تكتب إلا في الأقسام، فهذا يعني أنها كتبت تحت
                     if (normalizedAllCodes.includes(cleanCode)) {
-                         issues.push(`الفنيه **${user.nickname}** كودها **(${user.code})** مكتوب بالخطأ تحت في الأقسام.`);
+                         issues.push(`الفنيه **${user.nickname}** كودها **(${user.code})** مكتوب بالخطأ تحت في الاكواد.`);
                     }
                 }
             }
