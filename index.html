@@ -308,44 +308,45 @@ function findDuplicateCodesBySection(text) {
 
 // دالة الفحص المدمجة للموانئ ومخالفات البنات
 function checkSpecialViolations(text) {
-    const lines = text.split("\n");
     let issues = [];
-
-    // 1. جمع كل الأكواد الموجودة وتوحيد شكلها (إزالة المسافات وتحويلها لكبيرة)
+    
+    // 1. استخراج كل الأكواد الموجودة في التقرير كقائمة (مثل G-378)
     const allCodesInReport = text.match(/[A-Z]\s*-\s*\d+/gi) || [];
     const normalizedAllCodes = allCodesInReport.map(c => c.replace(/\s+/g, '').toUpperCase());
 
+    // 2. تحليل التقرير للوصول لقسم "السيدات و المعتمدين"
+    const lines = text.split("\n");
+    let inLadiesSection = false;
+
     lines.forEach(line => {
-        const mentions = line.match(/<@!?\d+>/g);
-        if (!mentions) return;
+        // نحدد بداية قسم السيدات أو المعتمدين
+        if (line.includes("السيدات") || line.includes("المعتمدين")) {
+            inLadiesSection = true;
+        } 
+        // إذا بدأ سطر جديد بقسم آخر (فيه : ) نخرج من حالة القسم
+        else if (line.includes(":") && !line.includes("<@")) {
+            inLadiesSection = false;
+        }
 
-        mentions.forEach(m => {
-            const user = usersMap[getDiscordId(m)];
-            if (!user) return;
+        if (inLadiesSection) {
+            const mentions = line.match(/<@!?\d+>/g);
+            if (mentions) {
+                mentions.forEach(m => {
+                    const user = usersMap[getDiscordId(m)];
+                    if (!user) return;
 
-            // توحيد كود المستخدم من قاعدة البيانات
-            const userCodeClean = user.code ? user.code.replace(/\s+/g, '').toUpperCase() : null;
+                    const userCode = user.code ? user.code.replace(/\s+/g, '').toUpperCase() : null;
 
-            // فحص الموانئ
-            if (line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
-                const portName = line.includes("لوس") ? "ميناء لوس" : "ميناء بوليتو";
-                if (userCodeClean) {
-                    if (!normalizedAllCodes.includes(userCodeClean)) {
-                       issues.push(`فني ${portName} **${user.nickname}** غير مسجل كودة في الاكواد في تقرير نائب العمليات.`);
+                    // هنا الفحص:
+                    // إذا كان للمستخدم كود مسجل في الـ API، نبحث هل الكود مكتوب في أي مكان في التقرير
+                    if (userCode && normalizedAllCodes.includes(userCode)) {
+                        issues.push(`الكادر النسائى **${user.nickname}** كودها مكتوب تحت في الاكواد في تقرير النائب.`);
                     }
-                }
+                });
             }
-
-            // فحص البنات
-            if ((line.includes("السيدات") || line.includes("المعتمدين")) && user.isWomen) {
-                if (userCodeClean) {
-                    if (normalizedAllCodes.includes(userCodeClean)) {
-                         issues.push(`الكادر النسائى **${user.nickname}** كودها مكتوب تحت في الاكواد في تقرير النائب.`);
-                    }
-                }
-            }
-        });
+        }
     });
+
     return [...new Set(issues)];
 }
 
@@ -417,13 +418,23 @@ Object.keys(sup).sort().forEach(id => {
     }
   });
 
-  Object.keys(ops).sort().forEach(id => {
+Object.keys(ops).sort().forEach(id => {
     if (!sup[id]) {
+      const user = usersMap[getDiscordId(id)];
+      
+      // نستخرج الكود من بيانات المستخدم
+      const userCode = user ? (user.code || "").toUpperCase() : "";
+      
+      // الشرط: إذا كان الشخص في قسم "المعتمدين" (أو أي قسم نسائي) ولديه كود G، نتجاهل التنبيه
+      // نتحقق أيضاً إذا كان القسم هو المعتمدين من خلال بيانات الـ ops
+      const isInLadiesSection = ops[id] && Object.keys(ops[id]).includes("المعتمدين");
+      const hasGCode = userCode.includes("G");
+      
+      if (isInLadiesSection && hasGCode) return; 
+
       hasDifference = true;
-      // جلب البيانات المتغيرة (مثل: المشرف العام)
       let dynamicData = originalsForNorms(ops[id], Object.keys(ops[id])).join(" - ");
       
-      // الجزء الأحمر في div مستقل، والباقي كله في سطر واحد تحته
       output += `<div class='missing'>${formatUser(id)}</div>`;
       output += `موجود في تقرير النائب وغير موجود في تقرير الإشراف (${dynamicData}).<hr>`;
     }
